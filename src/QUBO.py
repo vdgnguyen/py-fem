@@ -65,14 +65,16 @@ class DWaveQUBO(QUBO):
             for j in range(i+1, numBits):
                 bqm.add_quadratic(i, j, quadratic[(x[i],x[j])])
         
-        print("BQM: ", bqm)
+        #print("BQM: ", bqm)
         
         sampler = LeapHybridSampler()
         sampleset = sampler.sample(bqm)
+        print("sampleset=",sampleset)
         sample = sampleset.first.sample
         print("sample",sample)
         print("done optimising !!!")
-        return sample
+        qOpt = [sample[i] for i in range(numBits)]
+        return qOpt, sampleset.first.energy+offset
         
 class NaiveQUBO(QUBO):
     def __init__(self, optType):
@@ -139,5 +141,6 @@ if __name__ == "__main__":
     print(f"Solution: {qOpt}: func {fOpt}")
     
     qubo2 = DWaveQUBO("SPIN")
-    out = qubo2.solve(h,J)
+    qOpt, fOpt = qubo2.solve(h,J)
+    print(f"Solution: {qOpt}: func {fOpt}")
 
