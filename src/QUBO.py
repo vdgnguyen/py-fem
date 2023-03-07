@@ -52,19 +52,25 @@ class DWaveQUBO(QUBO):
         linear = {}
         quadratic = {}
         offset = 0.
-        for i in range(numBits):
-            offset += 0.5*J[i,i]
-            linear[x[i]] = h[i]
-            for j in range(i+1,numBits):
-                quadratic[(x[i],x[j])]=0.5*(J[i,j]+J[j,i])
-                
-       
         bqm = BinaryQuadraticModel(vartype=self.optType)
+        if self.optType=="SPIN":
+            for i in range(numBits):
+                offset += 0.5*J[i,i]
+                linear[x[i]] = h[i]
+                for j in range(i+1,numBits):
+                    quadratic[(x[i],x[j])]=0.5*(J[i,j]+J[j,i])      
+        elif self.optType =="BINARY":
+            for i in range(numBits):
+                linear[x[i]] = h[i] +0.5*J[i,i] 
+                for j in range(i+1,numBits):
+                    quadratic[(x[i],x[j])]=0.5*(J[i,j]+J[j,i])
+        else:
+            raise NotImplementedError(f"{self.optType} has not been implemented")
+        
         for i in range(numBits):
             bqm.add_linear(i,  linear[x[i]])
             for j in range(i+1, numBits):
                 bqm.add_quadratic(i, j, quadratic[(x[i],x[j])])
-        
         #print("BQM: ", bqm)
         
         sampler = LeapHybridSampler()
@@ -122,6 +128,8 @@ class NaiveQUBO(QUBO):
                 if f < fOpt:
                     fOpt=f
                     qOpt[:]= q
+        else:
+            raise NotImplementedError(f"{self.optType} has not been implemented")
         print("done optimising !!!")
         return qOpt, fOpt
         
@@ -141,6 +149,16 @@ if __name__ == "__main__":
     print(f"Solution: {qOpt}: func {fOpt}")
     
     qubo2 = DWaveQUBO("SPIN")
+    qOpt, fOpt = qubo2.solve(h,J)
+    print(f"Solution: {qOpt}: func {fOpt}")
+
+    print("*********************************************")
+
+    qubo = NaiveQUBO("BINARY")
+    qOpt, fOpt = qubo.solve(h,J)
+    print(f"Solution: {qOpt}: func {fOpt}")
+    
+    qubo2 = DWaveQUBO("BINARY")
     qOpt, fOpt = qubo2.solve(h,J)
     print(f"Solution: {qOpt}: func {fOpt}")
 
