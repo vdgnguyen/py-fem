@@ -397,8 +397,7 @@ class binarySearchSystem(nonLinearSystem):
         # direction search
         if self.initialGradientNorm is None:
             self.initialGradientNorm=np.linalg.norm(self.Fint - self.Fext)
-        #if self.nBitsRandom >0:
-        if False:
+        if self.nBitsRandom >0:
             D=np.zeros((self.systemSize,self.nBitsRandom))
             for i in range(self.nBitsRandom):
                 v =  2*np.random.rand(self.systemSize)-1
@@ -488,11 +487,15 @@ class gradientDescentSystem(nonLinearSystem):
         #b = fint -fext is the gradient of energy
         # gradient of the total energy
         if self.nBitsGradient == 0 and self.nBitsRandom >0:
-            D=self.alpha*(2*np.random.rand(self.systemSize,self.nBitsRandom)-1)
+            D=np.zeros((self.systemSize,self.nBitsRandom))
+            for i in range(self.nBitsRandom):
+                v =  2*np.random.rand(self.systemSize)-1
+                vnorm = np.linalg.norm(v)
+                D[:,i]= self.alpha*(v/vnorm)
             # create and solve QUBO problem
             h, J = QUBO.QUBO.createQUBO(self.solver,a=None,D=D)
             bSol = self.qubo.solve(h,J)
-            print(bSol)
+            print("PASS HERE", bSol)
             self.xcur += np.dot(D,bSol[0])
         elif self.nBitsGradient > 0:
             self.b = self.Fint-self.Fext 

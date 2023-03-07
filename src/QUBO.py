@@ -1,6 +1,9 @@
 
 import numpy as np
 
+from dwave.system import LeapHybridSampler
+from dimod import BinaryQuadraticModel
+
 
 class QUBO :
     def __init__(self):
@@ -38,6 +41,39 @@ class QUBO :
                 J += np.dot(np.dot(De.T,Ke),De)
         return h, J
         
+class DWaveQUBO(QUBO):
+    def __init__(self, optType):
+        self.optType=optType
+        
+    def solve(self, h, J):
+        print("start optimising ...")
+        numBits = len(h)
+        x = ["v"+str(p) for p in range(numBits)]
+        linear = {}
+        quadratic = {}
+        offset = 0.
+        for i in range(numBits):
+            offset += 0.5*J[i,i]
+            linear[x[i]] = h[i]
+            for j in range(i+1,numBits):
+                quadratic[(x[i],x[j])]=0.5*(J[i,j]+J[j,i])
+                
+       
+        bqm = BinaryQuadraticModel(vartype=self.optType)
+        for i in range(numBits):
+            bqm.add_linear(i,  linear[x[i]])
+            for j in range(i+1, numBits):
+                bqm.add_quadratic(i, j, quadratic[(x[i],x[j])])
+        
+        print("BQM: ", bqm)
+        
+        sampler = LeapHybridSampler()
+        sampleset = sampler.sample(bqm)
+        sample = sampleset.first.sample
+        print("sample",sample)
+        print("done optimising !!!")
+        return sample
+        
 class NaiveQUBO(QUBO):
     def __init__(self, optType):
         """
@@ -71,7 +107,7 @@ class NaiveQUBO(QUBO):
                 if f < fOpt:
                     fOpt=f
                     qOpt[:]= q
-        elif self.optType =="BIN":
+        elif self.optType =="BINARY":
             qOpt = np.zeros(numBits)
             fOpt = np.dot(qOpt,h) + 0.5*np.dot(qOpt,np.dot(J,qOpt))
             for ic in range(1,numCases):
@@ -102,6 +138,6 @@ if __name__ == "__main__":
     qOpt, fOpt = qubo.solve(h,J)
     print(f"Solution: {qOpt}: func {fOpt}")
     
-    qubo = NaiveQUBO("BIN")
-    qOpt, fOpt = qubo.solve(h,J)
-    print(f"Solution: {qOpt}: func {fOpt}")
+    qubo2 = DWaveQUBO("SPIN")
+    out = qubo2.solve(h,J)
+

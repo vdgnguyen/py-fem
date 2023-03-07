@@ -653,12 +653,12 @@ class FEMSolver:
                        tol=1e-6, absTol=1e-10, maxFailedSteps=100):
         systemSize=len(self.dofDict)
         fullSize = len(self.dofDict) + len(self.fixedDofs)
-        #self.system = System.gradientDescentSystem(self, qubo, systemSize, fullSize, 
-        #             nBitsGradient, etaMin, etaMax, 
-        #             nBitsRandom, alpha)
-        self.system = System.binarySearchSystem(self, qubo, systemSize, fullSize, 
+        self.system = System.gradientDescentSystem(self, qubo, systemSize, fullSize, 
                      nBitsGradient, etaMin, etaMax, 
                      nBitsRandom, alpha)
+        #self.system = System.binarySearchSystem(self, qubo, systemSize, fullSize, 
+        #             nBitsGradient, etaMin, etaMax, 
+        #             nBitsRandom, alpha)
         
         timeStep = (endTime-startTime)/nsteps # time step
         previousTime=startTime
