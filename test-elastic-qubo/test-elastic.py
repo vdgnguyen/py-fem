@@ -12,11 +12,11 @@ qubo = QUBO.DWaveQUBO("SPIN")
 mysolver = Solver.FEMSolver("ElasticTest")
 mysolver.loadMeshFile("input-elastic.dat")
 print(f"number of dofs = {len(mysolver.dofDict)}")
-mysolver.qubo_solve(qubo, nsteps=1, maxNRIterations=5000,
+mysolver.qubo_solve(qubo, nsteps=1, maxNRIterations=20,
                     nBitsGradient=0,
                     etaMin = 0.,
                     etaMax = 1e-1,
-                    nBitsRandom =15,
+                    nBitsRandom =30,
                     alpha = 1e-3,
                     tol = 1e-3,
                     maxNumIncreased=5,
