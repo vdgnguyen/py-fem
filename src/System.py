@@ -7,6 +7,62 @@ from scipy.sparse import csc_matrix, linalg
 import time
 import QUBO
 
+def func(A,b,x):
+    return 0.5*np.dot(x,np.matmul(A,x)) - np.dot(b,x)
+
+def gradFunc(A, b, x):
+    return np.matmul(A,x) - b
+
+def newGradient(x0, Niter, A, b, M):
+    allSearchDirs = {}
+    N = len(x0)
+    for i in range(M-1):
+        allSearchDirs[-i-1] = np.zeros(N)
+    
+    x = np.copy(x0)
+    g = gradFunc(A,b,x0)
+    gnorm0 = np.linalg.norm(g, np.inf)
+    allSearchDirs[0]= -1*g
+    #print(allSearchDirs)
+    history = [func(A,b,x)]
+    alphas = []
+    for ii in range(1, Niter):
+        lastPos = max(allSearchDirs.keys())
+        vv = [allSearchDirs[lastPos-j] for j in range(M)]
+        bv = np.zeros(M)
+        Av = np.zeros((M,M))
+        for j in range(M):
+            if np.linalg.norm(vv[j], np.inf) > 1e-10:
+                bv[j] = np.dot(g,vv[j])
+                for k in range(M):
+                    if np.linalg.norm(vv[k], np.inf) > 1e-10:
+                        Av[j,k] = np.dot(vv[j],np.matmul(A,vv[k]))
+        
+        for j in range(M):
+            if Av[j,j] == 0:
+                Av[j,j]=np.max(Av)
+        
+        
+        allA = np.linalg.solve(Av, -1*bv)
+        #print(f"N = {N}, M = {M}, alphas = {allA}")
+        
+        alphas.append(allA.tolist())
+        s = allA[0]*vv[0]
+        for j in range(1,M):
+            s += allA[j]*vv[j]
+        
+        x += s
+        f = func(A,b,x)
+        history.append(f)
+        g = gradFunc(A,b,x)
+        gnorm = np.linalg.norm(g, np.inf)
+        allSearchDirs[lastPos] = 1.*s
+        allSearchDirs[lastPos+1] = -1.*g
+        print(f"ITER {ii}: func = {f:.6e} gnorm/gnorm0 = {gnorm/gnorm0:.6e} gnorm0={gnorm0:.6e}")
+        if gnorm/gnorm0 < 1e-8:
+            break
+    
+    return x, history, np.array(alphas)
 
 class linearSystem:
     def __init__(self, systemSize):
@@ -96,7 +152,14 @@ class linearSystem:
          
         Amat = csc_matrix((data, (row, col)), shape=(self.systemSize, self.systemSize))
         lu = linalg.splu(Amat)
-        self.x = lu.solve(self.b)    
+        #self.x = lu.solve(self.b)  
+        
+        Anumpy = Amat.toarray()
+        np.savetxt("A.csv", Anumpy, delimiter=",")
+        np.savetxt("b.csv", self.b, delimiter=",")
+        x0 = self.b/np.diag(Anumpy)
+        self.x, history, alphas= newGradient(x0=x0, Niter=2000, A=Anumpy, b=self.b, M=10)
+        
         print("solving time in linearSystem: %e seconds" % (time.time() - start_time))
         return 1
     
