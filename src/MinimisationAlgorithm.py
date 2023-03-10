@@ -21,6 +21,89 @@ class GeneralFunc:
     def trueMinFunc(self):
         pass
 
+def oneLineSearch_divide(funcObj, x0, s, g0, Nitermax=20, tol = 1e-6, absTol = 1e-12):
+    """
+    Parameters
+    ----------
+    funcObj : GeneralFunc
+        A function of multiple variables to be minimized.
+    x0 : np.array
+        Starting point.
+    s : np.array
+        A search direction.
+    g0 : np.array
+        Gradient of function at x0.
+    Nitermax : int, optional
+        Maximum number of iterations. The default is 20.
+    tol : float, optional
+        Relative error tolerance. The default is 1e-6.
+    absTol : float, optional
+        Absolte error tolerance. The default is 1e-12.
+
+    Raises
+    ------
+    RuntimeError
+        The maximum number of iterations is reached.
+
+    Returns
+    -------
+    x: np.array
+        New location.
+    g: np.array
+        New gradient.
+    alpha : double
+        Search parameter in x = x + alpha*s.
+
+    """
+    alpha=0.
+    phi0 = np.dot(s,g0)
+    if phi0 >0:
+        raise RuntimeError("WROOONG DIRECTION")
+    if np.abs(phi0) < absTol:
+        print("convergece at the begining")
+        return x0, g0, alpha
+    itphi = 0
+    h = 0.1
+    phi1 = 0
+    while True:
+        itphi += 1
+        if itphi > 20:
+            raise RuntimeError("cannot found range")
+        g = funcObj.gradFunc(x0+h*s)
+        phi1 = np.dot(s,g)
+        if phi1 > 0:
+            break
+        else:
+            h *=2
+    
+    phiRef = phi0
+    alpha0 = 0
+    alpha1 = h
+    iteIndex=0
+    while True:
+        iteIndex = iteIndex+1
+        alpha = 0.5*(alpha0 + alpha1)
+        g = funcObj.gradFunc(x0+alpha*s)
+        phi = np.dot(s,g)
+        print(f"ITER {iteIndex}: alpha={alpha} phi/phi0= {phi/phiRef}")
+        
+        if np.abs(phi)< tol*np.abs(phiRef):
+            print("convergence")
+            break
+        
+        if alpha1 - alpha0 < tol*h:
+            print("convergence")
+            break
+        
+        if phi*phi0 > 0:
+            alpha0 = alpha
+            phi0 = phi
+        if phi*phi1 >0:
+            alpha1=alpha
+            phi1=phi
+        
+    return x0+ alpha*s, g, alpha
+
 def oneLineSearch(funcObj, x0, s, g0, Nitermax=20, tol = 1e-6, absTol = 1e-12):
     """
     Parameters
@@ -70,7 +153,7 @@ def oneLineSearch(funcObj, x0, s, g0, Nitermax=20, tol = 1e-6, absTol = 1e-12):
         x = x0 + alpha*s
         g = funcObj.gradFunc(x)
         phi = np.dot(s,g)
-        print(f"iter = {itphi}: phi/phi0={phi/phi0} phi0 = {phi0}")
+        print(f"iter = {itphi}: phi/phi0={phi/phi0:.6e} phi0 = {phi0:.6e} alpha={alpha}")
         if np.abs(phi) < tol*np.abs(phi0):
             print("convergence is achieved!!!!!!!")
             break
@@ -112,7 +195,7 @@ def gradientDescent(x0, Niter, funcObj, tol=1e-8, absTol=1e-12):
         return x, np.array(history), np.array(alphas)
     
     for ii in range(1,Niter):
-        x, g, alpha = oneLineSearch(funcObj,x,s,g)
+        x, g, alpha = oneLineSearch_divide(funcObj,x,s,g)
         alphas.append([alpha])
         s = -1*g/gnorm0 # to make it dimensionless
         f = funcObj.func(x)
@@ -156,7 +239,7 @@ def conjugateGradient(x0, Niter, funcObj, updateMethod, tol=1e-8, absTol=1e-12):
         return x, np.array(history), np.array(alphas)
     for ii in range(1,Niter):
         # line search
-        x, grad, alpha = oneLineSearch(funcObj,x,s,g,20)
+        x, grad, alpha = oneLineSearch_divide(funcObj,x,s,g,20)
         y = grad-g
         if updateMethod=="Hestenes and Stiefel 1952":
             beta = np.dot(grad,y)/np.dot(s,y)
@@ -267,9 +350,9 @@ def multipleDirectionSearch(x0, Niter, funcObj, M, tol=1e-8, absTol=1e-12):
         g = funcObj.gradFunc(x)
         A = funcObj.hessFunc(x)
         gnorm = np.linalg.norm(g, np.inf)
-        #snorm = np.linalg.norm(s, np.inf)
-        allSearchDirs[lastPos] = 1.*s/normAlpha
-        allSearchDirs[lastPos+1] = -1.*g/gnorm0
+        snorm = np.linalg.norm(s, np.inf)
+        allSearchDirs[lastPos] = 1.*s/snorm
+        allSearchDirs[lastPos+1] = -1.*g/gnorm
         print(f"ITER {ii}: func = {f:.6e} gnorm/gnorm0 = {gnorm/gnorm0:.6e} gnorm0={gnorm0:.6e}")
         
         if gnorm/gnorm0 < tol:
